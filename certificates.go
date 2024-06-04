@@ -70,6 +70,12 @@ func (cert Certificate) Hash() string { return cert.hash }
 // NeedsRenewal returns true if the certificate is
 // expiring soon (according to cfg) or has expired.
 func (cert Certificate) NeedsRenewal(cfg *Config) bool {
+	if cfg.NeedsRenewal != nil {
+		if renew, ok := cfg.NeedsRenewal(cert); ok {
+			return renew
+		}
+	}
+
 	return currentlyInRenewalWindow(cert.Leaf.NotBefore, expiresAt(cert.Leaf), cfg.RenewalWindowRatio)
 }
 

@@ -69,6 +69,10 @@ type Config struct {
 	// ignore returned errors.
 	OnEvent func(ctx context.Context, event string, data map[string]any) error
 
+	// If set, used to determine renewal decisions. Return a (needs renewal,
+	// authorative_decision) tuple.
+	NeedsRenewal func(Certificate) (bool, bool)
+
 	// DefaultServerName specifies a server name
 	// to use when choosing a certificate if the
 	// ClientHello's ServerName field is empty.
@@ -147,6 +151,9 @@ type Config struct {
 	// wildcard certificate.
 	// EXPERIMENTAL: Subject to change or removal.
 	SubjectTransformer func(ctx context.Context, domain string) string
+
+	// If set, provides the ability to wrap used http transports.
+	WrapTransport func(http.RoundTripper) http.RoundTripper
 
 	// Set a logger to enable logging. If not set,
 	// a default logger will be created.
@@ -1246,6 +1253,9 @@ type OCSPConfig struct {
 	// Optionally specify a function that can return the URL
 	// for an HTTP proxy to use for OCSP-related HTTP requests.
 	HTTPProxy func(*http.Request) (*url.URL, error)
+
+	// If not set, uses http.DefaultClient.
+	HTTPClient *http.Client
 }
 
 // certIssueLockOp is the name of the operation used

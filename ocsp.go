@@ -169,8 +169,16 @@ func getOCSPForCert(ocspConfig OCSPConfig, bundle []byte) ([]byte, *ocsp.Respons
 	}
 
 	// configure HTTP client if necessary
-	httpClient := http.DefaultClient
+	httpClient := ocspConfig.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
 	if ocspConfig.HTTPProxy != nil {
+		if ocspConfig.HTTPClient != nil {
+			return nil, nil, fmt.Errorf("can't set both a httpclient and a httproxy")
+		}
+
 		httpClient = &http.Client{
 			Transport: &http.Transport{
 				Proxy: ocspConfig.HTTPProxy,

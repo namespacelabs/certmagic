@@ -273,9 +273,15 @@ func NewACMEIssuer(cfg *Config, template ACMEIssuer) *ACMEIssuer {
 			RootCAs: template.TrustedRoots,
 		}
 	}
+
 	template.httpClient = &http.Client{
-		Transport: transport,
-		Timeout:   HTTPTimeout,
+		Timeout: HTTPTimeout,
+	}
+
+	if cfg.WrapTransport != nil {
+		template.httpClient.Transport = cfg.WrapTransport(transport)
+	} else {
+		template.httpClient.Transport = transport
 	}
 
 	return &template
