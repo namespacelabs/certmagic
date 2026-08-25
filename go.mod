@@ -11,7 +11,7 @@ require (
 	github.com/zeebo/blake3 v0.2.3
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.52.0
-	golang.org/x/net v0.54.0
+	golang.org/x/net v0.55.0
 )
 
 require (
