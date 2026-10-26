@@ -40,7 +40,7 @@ import (
 // and if panicCount < 10, the function is called recursively,
 // incrementing panicCount each time. Initial invocation should
 // start panicCount at 0.
-func (certCache *Cache) maintainAssets(panicCount int) {
+func (certCache *Cache) maintainAssets(ctx context.Context, panicCount int) {
 	log := certCache.logger.Named("maintenance")
 	log = log.With(zap.String("cache", fmt.Sprintf("%p", certCache)))
 
@@ -50,7 +50,7 @@ func (certCache *Cache) maintainAssets(panicCount int) {
 			buf = buf[:runtime.Stack(buf, false)]
 			log.Error("panic", zap.Any("error", err), zap.ByteString("stack", buf))
 			if panicCount < 10 {
-				certCache.maintainAssets(panicCount + 1)
+				certCache.maintainAssets(ctx, panicCount+1)
 			}
 		}
 	}()
@@ -61,9 +61,6 @@ func (certCache *Cache) maintainAssets(panicCount int) {
 	certCache.optionsMu.RUnlock()
 
 	log.Info("started background certificate maintenance")
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	for {
 		select {

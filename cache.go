@@ -15,6 +15,7 @@
 package certmagic
 
 import (
+	"context"
 	"fmt"
 	weakrand "math/rand"
 	"strings"
@@ -63,6 +64,8 @@ type Cache struct {
 	// Close this channel to cancel asset maintenance
 	stopChan chan struct{}
 
+	cancelMaintenance context.CancelFunc
+
 	// Used to signal when stopping is completed
 	doneChan chan struct{}
 
@@ -110,13 +113,15 @@ func NewCache(opts CacheOptions) *Cache {
 		panic("cache must be initialized with a GetConfigForCert callback")
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	c := &Cache{
-		options:    opts,
-		cache:      make(map[string]Certificate),
-		cacheIndex: make(map[string][]string),
-		stopChan:   make(chan struct{}),
-		doneChan:   make(chan struct{}),
-		logger:     opts.Logger,
+		options:           opts,
+		cache:             make(map[string]Certificate),
+		cacheIndex:        make(map[string][]string),
+		stopChan:          make(chan struct{}),
+		cancelMaintenance: cancel,
+		doneChan:          make(chan struct{}),
+		logger:            opts.Logger,
 	}
 
 	// absolutely do not allow a nil logger; panics galore
@@ -124,7 +129,7 @@ func NewCache(opts CacheOptions) *Cache {
 		c.logger = defaultLogger
 	}
 
-	go c.maintainAssets(0)
+	go c.maintainAssets(ctx, 0)
 
 	return c
 }
@@ -141,7 +146,8 @@ func (certCache *Cache) SetOptions(opts CacheOptions) {
 // stopped, it cannot be reused.
 func (certCache *Cache) Stop() {
 	close(certCache.stopChan) // signal to stop
-	<-certCache.doneChan      // wait for stop to complete
+	certCache.cancelMaintenance()
+	<-certCache.doneChan // wait for stop to complete
 }
 
 // CacheOptions is used to configure certificate caches.
