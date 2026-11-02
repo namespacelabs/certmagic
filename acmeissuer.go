@@ -116,6 +116,12 @@ type ACMEIssuer struct {
 	// as to cancel challenges too early.
 	CertObtainTimeout time.Duration
 
+	// IssueTimeout cancels the context for the entire Issue operation after
+	// this duration, including account retrieval and retries. Zero adds no
+	// timeout beyond the caller's context. This is not a strict wall-clock
+	// limit: DNS challenge cleanup may continue independently of that context.
+	IssueTimeout time.Duration
+
 	// Address of custom DNS resolver to be used
 	// when communicating with ACME server
 	Resolver string
@@ -219,6 +225,9 @@ func NewACMEIssuer(cfg *Config, template ACMEIssuer) *ACMEIssuer {
 	}
 	if template.CertObtainTimeout == 0 {
 		template.CertObtainTimeout = DefaultACME.CertObtainTimeout
+	}
+	if template.IssueTimeout == 0 {
+		template.IssueTimeout = DefaultACME.IssueTimeout
 	}
 	if template.Resolver == "" {
 		template.Resolver = DefaultACME.Resolver
@@ -366,6 +375,12 @@ func (am *ACMEIssuer) PreCheck(ctx context.Context, names []string, interactive 
 func (am *ACMEIssuer) Issue(ctx context.Context, csr *x509.CertificateRequest) (*IssuedCertificate, error) {
 	if am.config == nil {
 		panic("missing config pointer (must use NewACMEIssuer)")
+	}
+
+	if am.IssueTimeout > 0 {
+		issueCtx, cancel := context.WithTimeout(ctx, am.IssueTimeout)
+		defer cancel()
+		ctx = issueCtx
 	}
 
 	var attempts int
